@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 16px "Baskerville";
+  margin: 0;
+  letter-spacing:2px;
+}
+
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: .3px;
+}
+
+.area {
+  fill: #fff;
+}
+#title{
+    font-family:"Baskerville"; font-weight: lighter;
+	font-size: 36px;
+	margin:20px;
+  letter-spacing:1px;		
+}
+#subtitle{
+    font-family:"Baskerville"; font-weight: lighter;
+	font-size: 12px;
+	margin:20px;
+  letter-spacing:1px;		
+}
+</style>
+<body>
+	<div id ="title">Yelp Draft 2c</div>
+	<div id = "subtitle">Timeline of Reviews for restaurants with over 1000 reviews</div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 8, right: 10, bottom: 20, left: 100},
+    width = 800 - margin.left - margin.right,
+    height = 100 - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%m/%Y").parse;
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var area = d3.svg.area()
+    .x(function(d) { return x(d.date); })
+    .y0(height)
+    .y1(function(d) { return y(d.price); });
+
+var line = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.price); });
+
+
+
+
+d3.csv("restaurans_morethan1000_month.csv", type, function(error, data) {
+	data.sort(function(a, b) {
+    a = new Date(a.date);
+    b = new Date(b.date);
+    return a>b ? -1 : a<b ? 1 : 0;
+});
+	data.reverse()
+	console.log(data)
+	//for(var date in data){
+	//	console.log(data[date].date)
+	//}
+  //// Nest data by symbol.
+  var symbols = d3.nest()
+      .key(function(d) { return d.symbol; })
+      .entries(data);
+
+  // Compute the maximum price per symbol, needed for the y-domain.
+  symbols.forEach(function(s) {
+    s.maxPrice = d3.max(s.values, function(d) { return d.price; });
+  });
+
+  // Compute the minimum and maximum date across symbols.
+  // We assume values are sorted by date.
+  x.domain([
+    d3.min(symbols, function(s) { return s.values[0].date; }),
+    d3.max(symbols, function(s) { return s.values[s.values.length - 1].date; })
+  ]);
+
+  // Add an SVG element for each symbol, with the desired dimensions and margin.
+  var svg = d3.select("body").selectAll("svg")
+      .data(symbols)
+    .enter().append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Add the area path elements. Note: the y-domain is set per element.
+//  svg.append("path")
+//      .attr("class", "area")
+//      .attr("d", function(d) { y.domain([0, d.maxPrice]); return area(d.values); });
+//
+  // Add the line path elements. Note: the y-domain is set per element.
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", function(d) { y.domain([0,30]); return line(d.values); });
+     // .attr("d", function(d) { y.domain([0, d.maxPrice]); return line(d.values); });
+
+  // Add a small label for the symbol name.
+  svg.append("text")
+      .attr("x", width - 6)
+      .attr("y", height + 8)
+      .style("text-anchor", "end")
+      .text(function(d) { return d.key; });
+});
+
+function type(d) {
+  d.price = +d.price;
+  d.date = parseDate(d.date);
+  return d;
+}
+
+</script>
